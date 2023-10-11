@@ -128,5 +128,21 @@ output "cluster_name" {
   description = "cluster_name"
 }
 
+output "ecs_service_definition_id" {
+  value       = module.ecs_service_definition.id
+  description = "ecs_service_definition_id"
+}
+
+output "ecs_service_definition_name" {
+  value       = module.ecs_service_definition.name
+  description = "ecs_service_definition_name"
+}
+
+output "autoscaling_policies" {
+  value       = module.ecs_service_definition.autoscaling_policies
+  description = "autoscaling_policies"
+}
+
+
 
 

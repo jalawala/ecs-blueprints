@@ -4,19 +4,6 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
-locals {
-
-  name   = "ecsdemo-queue-proc"
-  region = var.aws_region
-
-  container_name = "ecsdemo-queue-proc"
-
-  tags = {
-    Blueprint  = local.name
-    GithubRepo = "github.com/aws-ia/ecs-blueprints"
-  }
-}
-
 ################################################################################
 # ECS Blueprint
 ################################################################################
@@ -61,6 +48,12 @@ resource "aws_ecs_task_definition" "this" {
     {
       name  = local.container_name
       image = module.container_image_ecr.repository_url
+      environment = [
+        {
+          name  = "ProcessingQueueName",
+          value = module.processing_queue.this_sqs_queue_name
+        }
+      ]      
       logConfiguration = {
         "logDriver" : "awslogs",
         "options" : {
@@ -75,6 +68,65 @@ resource "aws_ecs_task_definition" "this" {
   lifecycle {
     ignore_changes = [container_definitions]
   }
+
+  tags = local.tags
+}
+
+module "ecs_service_definition" {
+  source  = "terraform-aws-modules/ecs/aws//modules/service"
+  version = "~> 5.0"
+
+  deployment_controller = "ECS"
+
+  name               = local.name
+  desired_count      = 2
+  cluster_arn        = data.aws_ecs_cluster.core_infra.arn
+ 
+
+  subnet_ids = data.aws_subnets.private.ids
+    security_group_rules = {
+    egress_all = {
+      type        = "egress"
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+ 
+  # Task Definition
+  create_iam_role        = false
+  create_task_definition = false
+  #task_definition_arn = aws_ecs_task_definition.this.arn
+  task_definition_arn = "arn:aws:ecs:us-east-1:000474600478:task-definition/ecsdemo-queue-proc:4"
+  
+  enable_execute_command = true
+  
+  enable_autoscaling = true
+  autoscaling_min_capacity = 1
+  autoscaling_max_capacity = 10
+  
+  autoscaling_policies = { 
+      "cpu":   { 
+           "policy_type": "TargetTrackingScaling", 
+           "target_tracking_scaling_policy_configuration": {
+              "predefined_metric_specification": { 
+                    "predefined_metric_type": "ECSServiceAverageCPUUtilization" 
+                } 
+            }
+        },
+        "memory":  { 
+              "policy_type": "TargetTrackingScaling", 
+              "target_tracking_scaling_policy_configuration": { 
+                  "predefined_metric_specification": { 
+                     "predefined_metric_type": "ECSServiceAverageMemoryUtilization" 
+                   }
+               }
+        } 
+    }
+
+
+  #ignore_task_definition_changes = false
 
   tags = local.tags
 }
@@ -458,9 +510,12 @@ module "codepipeline_ci_cd" {
 resource "aws_iam_role" "task" {
   name               = "${local.name}-task"
   assume_role_policy = data.aws_iam_policy_document.task.json
-
+  managed_policy_arns = ["arn:aws:iam::aws:policy/CloudWatchFullAccess"]
+  
   tags = local.tags
 }
+
+
 
 data "aws_iam_policy_document" "task" {
   statement {

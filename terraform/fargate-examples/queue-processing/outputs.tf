@@ -38,6 +38,13 @@ output "lambda_function_arn" {
   description = "lambda_function_arn"
 }
 
+output "lambda_function_message_producer" {
+  value       = module.lambda_function_message_producer.lambda_function_arn
+  description = "lambda_function_message_producer"
+}
+
+
+
 output "aws_cloudwatch_event_rule" {
   value       = aws_cloudwatch_event_rule.fargate_scaling.arn
   description = "aws_cloudwatch_event_rule"

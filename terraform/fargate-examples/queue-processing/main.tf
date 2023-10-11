@@ -98,7 +98,7 @@ module "ecs_service_definition" {
   create_iam_role        = false
   create_task_definition = false
   #task_definition_arn = aws_ecs_task_definition.this.arn
-  task_definition_arn = "arn:aws:ecs:us-east-1:000474600478:task-definition/ecsdemo-queue-proc:4"
+  task_definition_arn = "arn:aws:ecs:us-east-1:000474600478:task-definition/ecsdemo-queue-proc:7"
   
   enable_execute_command = true
   
@@ -162,6 +162,28 @@ module "lambda_function" {
       source_arn = aws_cloudwatch_event_rule.fargate_scaling.arn
     }
   }
+
+  tags = local.tags
+}
+
+module "lambda_function_message_producer" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name      = "${local.name}-message-producer"
+  description        = "This function can be used to send test messages to the processing queue and trigger ASG scaling events."
+  handler            = "lambda_function.lambda_handler"
+  runtime            = "python3.9"
+  publish            = true
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.lambda_role.json
+  source_path        = "../../../application-code/message-producer/"
+
+  environment_variables = {
+    queueName      = module.processing_queue.this_sqs_queue_name
+    defaultMsgProcDuration =  25
+  }
+  
+  cloudwatch_logs_retention_in_days = 30
 
   tags = local.tags
 }
@@ -247,36 +269,13 @@ module "processing_queue" {
   source  = "terraform-aws-modules/sqs/aws"
   version = "~> 2.0"
 
-  name = "${local.name}-processing-queue"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid      = "SQSSendMessageS3"
-        Effect   = "Allow"
-        Action   = "SQS:SendMessage"
-        Resource = "arn:aws:sqs:${local.region}:${data.aws_caller_identity.current.account_id}:${local.name}-processing-queue"
-        Principal = {
-          Service = "s3.amazonaws.com"
-        }
-      },
-    ]
-  })
-
+  name = "${local.name}-processing-queue.fifo"
+  fifo_queue = true
+  content_based_deduplication = true
+  
   tags = local.tags
 }
 
-resource "aws_s3_bucket_notification" "bucket_notification" {
-  bucket = module.source_s3_bucket.s3_bucket_id
-
-  queue {
-    queue_arn     = module.processing_queue.this_sqs_queue_arn
-    events        = ["s3:ObjectCreated:Put", "s3:ObjectCreated:Post", "s3:ObjectCreated:Copy"]
-    filter_prefix = "ecsproc/"
-    filter_suffix = ".jpg"
-  }
-}
 
 ################################################################################
 # ECS Scaling Params

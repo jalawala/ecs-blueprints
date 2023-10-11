@@ -98,7 +98,7 @@ module "ecs_service_definition" {
   create_iam_role        = false
   create_task_definition = false
   #task_definition_arn = aws_ecs_task_definition.this.arn
-  task_definition_arn = "arn:aws:ecs:us-east-1:000474600478:task-definition/ecsdemo-queue-proc:7"
+  task_definition_arn = "arn:aws:ecs:us-east-1:000474600478:task-definition/ecsdemo-queue-proc:8"
   
   enable_execute_command = true
   

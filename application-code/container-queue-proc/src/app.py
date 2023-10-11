@@ -10,7 +10,8 @@ from botocore.exceptions import ClientError
 from botocore.config import Config
 
 # Create logger
-logging.basicConfig(filename='consumer.log', level=logging.INFO)
+#logging.basicConfig(filename='consumer.log', level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 # Define config
@@ -48,34 +49,35 @@ def publishMetricValue(namespace, metricName, value):
 if __name__=="__main__":
 
     # Initialize variables
+    logger.info('Calling get_queue_by_name...')
     queue = sqs.get_queue_by_name(QueueName=queueName)
     batchSize = 1
     queueWaitTime= 5
 
     # start continuous loop
-    print('Starting queue consumer process...')
+    logger.info('Starting queue consumer process...')
     while True: 
 
         try:
             
             # Read messages from queue
-            print('Polling messages from the processing queue')
+            logger.info('Polling messages from the processing queue')
             messages = queue.receive_messages(AttributeNames=['All'], MaxNumberOfMessages=batchSize, WaitTimeSeconds=queueWaitTime) 
             if not messages: continue
-            print('-- Received {} messages'.format(len(messages)))
+            logger.info('-- Received {} messages'.format(len(messages)))
             
             # Process messages
             for message in messages:
                 
                 # Process message
-                print('---- Processing message {}...'.format(message.message_id))
+                logger.info('---- Processing message {}...'.format(message.message_id))
                 messageBody = json.loads(message.body)
                 processingDuration = messageBody.get('duration')
                 time.sleep(processingDuration)
                 
                 # Delete the message
                 message.delete()
-                print('---- Message processed and deleted')
+                logger.info('---- Message processed and deleted')
                 
                 # Report message duration to cloudwatch
                 publishMetricValue('ASG-Metrics', 'MsgProcessingDuration', processingDuration)

@@ -180,7 +180,7 @@ module "lambda_function_message_producer" {
 
   environment_variables = {
     queueName      = module.processing_queue.this_sqs_queue_name
-    defaultMsgProcDuration =  25
+    defaultMsgProcDuration =  20
   }
   
   cloudwatch_logs_retention_in_days = 30

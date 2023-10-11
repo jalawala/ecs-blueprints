@@ -34,7 +34,7 @@ queueName = os.environ['queueName']
 defaultMsgProcDuration = int(os.environ['defaultMsgProcDuration'])
 
 # Initialize other parameters
-nMessages = 50
+nMessages = 100
 
 def lambda_handler(event, context):
 

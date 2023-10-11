@@ -1,6 +1,7 @@
 
 # Import modules
 import boto3
+import os
 import json
 import time
 from pprint import pprint

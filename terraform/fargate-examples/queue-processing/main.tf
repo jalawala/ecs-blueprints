@@ -79,7 +79,7 @@ module "ecs_service_definition" {
   deployment_controller = "ECS"
 
   name               = local.name
-  desired_count      = 2
+  desired_count      = 1
   cluster_arn        = data.aws_ecs_cluster.core_infra.arn
  
 

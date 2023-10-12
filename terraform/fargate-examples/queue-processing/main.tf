@@ -124,7 +124,9 @@ resource "aws_appautoscaling_policy" "ecs_sqs_app_scaling_policy" {
 
   target_tracking_scaling_policy_configuration {
     target_value = 12
-
+    scale_out_cooldown = 150
+    scale_in_cooldown  = 0
+    
     customized_metric_specification {
       metrics {
         label = "Get the queue size (the number of messages waiting to be processed)"
@@ -195,37 +197,6 @@ resource "aws_cloudwatch_log_group" "this" {
 # Lambda Function ECS scaling trigger
 ################################################################################
 
-module "lambda_function_scaling_metric_publisher" {
-  source = "terraform-aws-modules/lambda/aws"
-
-  function_name      = "${local.name}-metric_publisher"
-  description        = "This function publishes a custom BPI metric every minute"
-  handler            = "lambda_function.lambda_handler"
-  runtime            = "python3.9"
-  publish            = true
-  attach_policy_json = true
-  policy_json        = data.aws_iam_policy_document.lambda_role.json
-  source_path        = "../../../application-code/scaling-metric-publisher/"
-
-  cloudwatch_logs_retention_in_days = 30
-  
-  environment_variables = {
-    queueName      = module.processing_queue.this_sqs_queue_name
-    ecsClusterName = data.aws_ecs_cluster.core_infra.cluster_name
-    ecsServiceName = module.ecs_service_definition.name
-    defaultMsgProcDuration =  20
-  }
-  
-  allowed_triggers = {
-    PollSSMScale = {
-      principal  = "events.amazonaws.com"
-      source_arn = aws_cloudwatch_event_rule.fargate_scaling.arn
-    }
-  }
-
-  tags = local.tags
-}
-
 module "lambda_function_message_producer" {
   source = "terraform-aws-modules/lambda/aws"
 
@@ -240,7 +211,8 @@ module "lambda_function_message_producer" {
 
   environment_variables = {
     queueName      = module.processing_queue.this_sqs_queue_name
-    defaultMsgProcDuration =  20
+    defaultMsgProcDuration =  25
+    nMessages = 300
   }
   
   cloudwatch_logs_retention_in_days = 30
@@ -260,70 +232,15 @@ resource "aws_cloudwatch_event_rule" "fargate_scaling" {
   tags = local.tags
 }
 
-resource "aws_cloudwatch_event_target" "ecs_fargate_lambda_function" {
-  rule = aws_cloudwatch_event_rule.fargate_scaling.name
-  arn  = module.lambda_function_scaling_metric_publisher.lambda_function_arn
-}
+# resource "aws_cloudwatch_event_target" "ecs_fargate_lambda_function" {
+#   rule = aws_cloudwatch_event_rule.fargate_scaling.name
+#   arn  = module.lambda_function_scaling_metric_publisher.lambda_function_arn
+# }
 
 ################################################################################
-# S3 Buckets and SQS Queue
+# SQS Queue
 ################################################################################
 
-module "source_s3_bucket" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 3.0"
-
-  bucket = "${local.name}-source-${local.region}-${random_id.this.hex}"
-
-  # For example only - please evaluate for your environment
-  force_destroy = true
-
-  attach_deny_insecure_transport_policy = true
-  attach_require_latest_tls_policy      = true
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
-
-  tags = local.tags
-}
-
-module "destination_s3_bucket" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 3.0"
-
-  bucket = "${local.name}-destination-${local.region}-${random_id.this.hex}"
-
-  # For example only - please evaluate for your environment
-  force_destroy = true
-
-  attach_deny_insecure_transport_policy = true
-  attach_require_latest_tls_policy      = true
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
-
-  tags = local.tags
-}
 
 module "processing_queue" {
   source  = "terraform-aws-modules/sqs/aws"
@@ -365,21 +282,6 @@ resource "aws_ssm_parameter" "sqs_processing_queue" {
   tags = local.tags
 }
 
-resource "aws_ssm_parameter" "s3_destination_bucket" {
-  name  = "PIPELINE_S3_DEST_BUCKET"
-  type  = "String"
-  value = module.destination_s3_bucket.s3_bucket_arn
-
-  tags = local.tags
-}
-
-resource "aws_ssm_parameter" "s3_destination_prefix" {
-  name  = "PIPELINE_S3_DEST_PREFIX"
-  type  = "String"
-  value = "processed"
-
-  tags = local.tags
-}
 
 resource "aws_ssm_parameter" "ecs_cluster_name" {
   name  = "PIPELINE_ECS_CLUSTER"
@@ -497,13 +399,7 @@ module "codebuild_ci" {
         }, {
         name  = "FOLDER_PATH"
         value = "./application-code/container-queue-proc/."
-        }, {
-        name  = "QUEUE_NAME"
-        value = module.processing_queue.this_sqs_queue_name
-        }, {
-        name  = "DESTINATION_BUCKET"
-        value = module.destination_s3_bucket.s3_bucket_id
-      },
+        },
     ]
   }
 
@@ -612,22 +508,6 @@ data "aws_iam_policy_document" "task_role" {
       "sqs:ReceiveMessage"
     ]
     resources = [module.processing_queue.this_sqs_queue_arn]
-  }
-  statement {
-    sid = "S3ReadWrite"
-    actions = [
-      "s3:ListBucket",
-      "s3:GetBucketLocation",
-      "s3:GetObject",
-      "s3:PutObject",
-      "s3:DeleteObject"
-    ]
-    resources = [
-      module.source_s3_bucket.s3_bucket_arn,
-      "${module.source_s3_bucket.s3_bucket_arn}/*",
-      module.destination_s3_bucket.s3_bucket_arn,
-      "${module.destination_s3_bucket.s3_bucket_arn}/*"
-    ]
   }
   statement {
     sid = "SSMRead"

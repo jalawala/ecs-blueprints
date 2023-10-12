@@ -33,43 +33,14 @@ output "aws_cloudwatch_log_group" {
   description = "aws_cloudwatch_log_group"
 }
 
-output "lambda_function_arn" {
-  value       = module.lambda_function_scaling_metric_publisher.lambda_function_arn
-  description = "lambda_function_arn"
-}
-
 output "lambda_function_message_producer" {
   value       = module.lambda_function_message_producer.lambda_function_arn
   description = "lambda_function_message_producer"
 }
 
-
-
 output "aws_cloudwatch_event_rule" {
   value       = aws_cloudwatch_event_rule.fargate_scaling.arn
   description = "aws_cloudwatch_event_rule"
-}
-
- 
-output "source_s3_bucket_id" {
-  value       = module.source_s3_bucket.s3_bucket_id
-  description = "Source S3 Bucket Id for data pipeline processing"
-}
-
-output "source_s3_bucket_arn" {
-  value       = module.source_s3_bucket.s3_bucket_arn
-  description = "Source S3 Bucket ARN for data pipeline processing"
-}
-
-
-output "destination_s3_bucket_id" {
-  value       = module.destination_s3_bucket.s3_bucket_id
-  description = "Destination S3 Bucket Id for processed files"
-}
-
-output "destination_s3_bucket_arn" {
-  value       = module.destination_s3_bucket.s3_bucket_arn
-  description = "Destination S3 Bucket ARN for processed files"
 }
 
 

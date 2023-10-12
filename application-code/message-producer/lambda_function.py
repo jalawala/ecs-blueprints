@@ -32,9 +32,8 @@ sqs = session.resource('sqs', config=config)
 # Read  environment variables
 queueName = os.environ['queueName']
 defaultMsgProcDuration = int(os.environ['defaultMsgProcDuration'])
+nMessages = int(os.environ['nMessages'])
 
-# Initialize other parameters
-nMessages = 100
 
 def lambda_handler(event, context):
 

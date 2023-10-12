@@ -1,0 +1,1 @@
+{"filename": "builds/72db14f7d847e7d2ae37aca42b5bd003c054a536566e63d2960e1e2fbf6cf64b.zip", "runtime": "python3.9", "artifacts_dir": "builds", "build_plan": [["zip", "../../../application-code/scaling-metric-publisher/", null]]}

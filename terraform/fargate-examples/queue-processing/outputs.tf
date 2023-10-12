@@ -34,7 +34,7 @@ output "aws_cloudwatch_log_group" {
 }
 
 output "lambda_function_arn" {
-  value       = module.lambda_function.lambda_function_arn
+  value       = module.lambda_function_scaling_metric_publisher.lambda_function_arn
   description = "lambda_function_arn"
 }
 

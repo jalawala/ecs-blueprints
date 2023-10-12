@@ -74,14 +74,14 @@ resource "aws_ecs_task_definition" "this" {
 
 module "ecs_service_definition" {
   source  = "terraform-aws-modules/ecs/aws//modules/service"
-  version = "~> 5.0"
+  version = "~> 5.2.2"
 
   deployment_controller = "ECS"
 
   name               = local.name
   desired_count      = 1
   cluster_arn        = data.aws_ecs_cluster.core_infra.arn
- 
+  enable_autoscaling = false
 
   subnet_ids = data.aws_subnets.private.ids
     security_group_rules = {
@@ -98,38 +98,91 @@ module "ecs_service_definition" {
   create_iam_role        = false
   create_task_definition = false
   #task_definition_arn = aws_ecs_task_definition.this.arn
-  task_definition_arn = "arn:aws:ecs:us-east-1:000474600478:task-definition/ecsdemo-queue-proc:8"
+  task_definition_arn = "arn:aws:ecs:us-east-1:000474600478:task-definition/ecsdemo-queue-proc:11"
   
   enable_execute_command = true
   
-  enable_autoscaling = true
-  autoscaling_min_capacity = 1
-  autoscaling_max_capacity = 10
-  
-  autoscaling_policies = { 
-      "cpu":   { 
-           "policy_type": "TargetTrackingScaling", 
-           "target_tracking_scaling_policy_configuration": {
-              "predefined_metric_specification": { 
-                    "predefined_metric_type": "ECSServiceAverageCPUUtilization" 
-                } 
-            }
-        },
-        "memory":  { 
-              "policy_type": "TargetTrackingScaling", 
-              "target_tracking_scaling_policy_configuration": { 
-                  "predefined_metric_specification": { 
-                     "predefined_metric_type": "ECSServiceAverageMemoryUtilization" 
-                   }
-               }
-        } 
-    }
-
-
   #ignore_task_definition_changes = false
 
   tags = local.tags
 }
+
+resource "aws_appautoscaling_target" "ecs_target" {
+  max_capacity       = 10
+  min_capacity       = 1
+  resource_id        = "service/${data.aws_ecs_cluster.core_infra.cluster_name}/${module.ecs_service_definition.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+resource "aws_appautoscaling_policy" "ecs_sqs_app_scaling_policy" {
+  name               = "ecs_sqs_scaling"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.ecs_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    target_value = 12
+
+    customized_metric_specification {
+      metrics {
+        label = "Get the queue size (the number of messages waiting to be processed)"
+        id    = "m1"
+
+        metric_stat {
+          metric {
+            metric_name = "ApproximateNumberOfMessagesVisible"
+            namespace   = "AWS/SQS"
+
+            dimensions {
+              name  = "QueueName"
+              value = module.processing_queue.this_sqs_queue_name
+            }
+          }
+
+          stat = "Sum"
+        }
+
+        return_data = false
+      }
+
+      metrics {
+        label = "Get the ECS running task count (the number of currently running tasks)"
+        id    = "m2"
+
+        metric_stat {
+          metric {
+            metric_name = "RunningTaskCount"
+            namespace   = "ECS/ContainerInsights"
+
+            dimensions {
+              name  = "ClusterName"
+              value = data.aws_ecs_cluster.core_infra.cluster_name
+            }
+
+            dimensions {
+              name  = "ServiceName"
+              value = module.ecs_service_definition.name
+            }
+          }
+
+          stat = "Average"
+        }
+
+        return_data = false
+      }
+
+      metrics {
+        label       = "Calculate the backlog per instance"
+        id          = "e1"
+        expression  = "m1 / m2"
+        return_data = true
+      }
+    }
+  }
+}
+
 
 resource "aws_cloudwatch_log_group" "this" {
   name              = "/ecs/${local.name}"
@@ -142,20 +195,27 @@ resource "aws_cloudwatch_log_group" "this" {
 # Lambda Function ECS scaling trigger
 ################################################################################
 
-module "lambda_function" {
+module "lambda_function_scaling_metric_publisher" {
   source = "terraform-aws-modules/lambda/aws"
 
-  function_name      = "${local.name}-${random_id.this.hex}"
-  description        = "Automatically invoke ECS tasks based on SQS queue size and available tasks"
+  function_name      = "${local.name}-metric_publisher"
+  description        = "This function publishes a custom BPI metric every minute"
   handler            = "lambda_function.lambda_handler"
   runtime            = "python3.9"
   publish            = true
   attach_policy_json = true
   policy_json        = data.aws_iam_policy_document.lambda_role.json
-  source_path        = "../../../application-code/lambda-function-queue-trigger/"
+  source_path        = "../../../application-code/scaling-metric-publisher/"
 
   cloudwatch_logs_retention_in_days = 30
-
+  
+  environment_variables = {
+    queueName      = module.processing_queue.this_sqs_queue_name
+    ecsClusterName = data.aws_ecs_cluster.core_infra.cluster_name
+    ecsServiceName = module.ecs_service_definition.name
+    defaultMsgProcDuration =  20
+  }
+  
   allowed_triggers = {
     PollSSMScale = {
       principal  = "events.amazonaws.com"
@@ -202,7 +262,7 @@ resource "aws_cloudwatch_event_rule" "fargate_scaling" {
 
 resource "aws_cloudwatch_event_target" "ecs_fargate_lambda_function" {
   rule = aws_cloudwatch_event_rule.fargate_scaling.name
-  arn  = module.lambda_function.lambda_function_arn
+  arn  = module.lambda_function_scaling_metric_publisher.lambda_function_arn
 }
 
 ################################################################################

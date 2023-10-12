@@ -37,7 +37,7 @@ module "container_image_ecr" {
 }
 
 resource "aws_ecs_task_definition" "this" {
-  family                   = local.container_name
+  family                   = "${local.container_name}-new"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = 256
@@ -46,7 +46,7 @@ resource "aws_ecs_task_definition" "this" {
   execution_role_arn       = one(data.aws_iam_roles.ecs_core_infra_exec_role.arns)
   container_definitions = jsonencode([
     {
-      name  = local.container_name
+      name  = "${local.container_name}-new"
       image = module.container_image_ecr.repository_url
       environment = [
         {
@@ -61,7 +61,7 @@ resource "aws_ecs_task_definition" "this" {
           name  = "metricType",
           value = local.metricType
         },
-                {
+        {
           name  = "metricNamespace",
           value = local.metricNamespace
         },
@@ -110,8 +110,8 @@ module "ecs_service_definition" {
   # Task Definition
   create_iam_role        = false
   create_task_definition = false
-  #task_definition_arn = aws_ecs_task_definition.this.arn
-  task_definition_arn = "arn:aws:ecs:us-east-1:000474600478:task-definition/ecsdemo-queue-proc:11"
+  task_definition_arn = aws_ecs_task_definition.this.arn
+  #task_definition_arn = "arn:aws:ecs:us-east-1:000474600478:task-definition/ecsdemo-queue-proc:11"
   
   enable_execute_command = true
   
@@ -294,76 +294,6 @@ module "processing_queue" {
   fifo_queue = true
   content_based_deduplication = true
   
-  tags = local.tags
-}
-
-
-################################################################################
-# ECS Scaling Params
-################################################################################
-
-resource "aws_ssm_parameter" "ecs_pipeline_enabled" {
-  name  = "PIPELINE_ENABLED"
-  type  = "String"
-  value = 1
-
-  tags = local.tags
-}
-
-resource "aws_ssm_parameter" "ecs_pipeline_max_tasks" {
-  name  = "PIPELINE_ECS_MAX_TASKS"
-  type  = "String"
-  value = 10
-
-  tags = local.tags
-}
-
-resource "aws_ssm_parameter" "sqs_processing_queue" {
-  name  = "PIPELINE_UNPROCESSED_SQS_URL"
-  type  = "String"
-  value = module.processing_queue.this_sqs_queue_name
-
-  tags = local.tags
-}
-
-
-resource "aws_ssm_parameter" "ecs_cluster_name" {
-  name  = "PIPELINE_ECS_CLUSTER"
-  type  = "String"
-  value = data.aws_ecs_cluster.core_infra.cluster_name
-
-  tags = local.tags
-}
-
-resource "aws_ssm_parameter" "ecs_task_definition" {
-  name  = "PIPELINE_ECS_TASK_DEFINITON"
-  type  = "String"
-  value = aws_ecs_task_definition.this.arn
-
-  tags = local.tags
-}
-
-resource "aws_ssm_parameter" "ecs_task_container_name" {
-  name  = "PIPELINE_ECS_TASK_CONTAINER"
-  type  = "String"
-  value = local.container_name
-
-  tags = local.tags
-}
-
-resource "aws_ssm_parameter" "ecs_task_subnet" {
-  name  = "PIPELINE_ECS_TASK_SUBNET"
-  type  = "String"
-  value = data.aws_subnets.private.ids[0]
-
-  tags = local.tags
-}
-
-resource "aws_ssm_parameter" "ecs_task_security_group" {
-  name  = "PIPELINE_ECS_TASK_SECURITYGROUP"
-  type  = "String"
-  value = module.service_task_security_group.security_group_id
-
   tags = local.tags
 }
 

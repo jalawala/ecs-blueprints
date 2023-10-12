@@ -8,6 +8,7 @@ from pprint import pprint
 import logging
 from botocore.exceptions import ClientError
 from botocore.config import Config
+import datetime
 
 # Create logger
 #logging.basicConfig(filename='consumer.log', level=logging.INFO)
@@ -35,6 +36,8 @@ metricNamespace = os.environ['metricNamespace']
 
 def publishMetricValue(metricValue):
 
+    now = datetime.datetime.now()
+    logger.info('Time {} publishMetricValue with metricNamespace {} appMetricName {} metricValue {} metricType {} queueName {}'.format(now, metricNamespace, appMetricName, metricValue,metricType, queueName))
     response = cloudwatch.put_metric_data(
         Namespace = metricNamespace,
         MetricData = [
@@ -84,6 +87,7 @@ if __name__=="__main__":
                 messageBody = json.loads(message.body)
                 processingDuration = messageBody.get('duration')
                 time.sleep(processingDuration)
+                #time.sleep(2)
                 
                 # Delete the message
                 message.delete()

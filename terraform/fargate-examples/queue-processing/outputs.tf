@@ -38,6 +38,11 @@ output "lambda_function_message_producer" {
   description = "lambda_function_message_producer"
 }
 
+output "lambda_function_target_bpi_update" {
+  value       = module.lambda_function_target_bpi_update.lambda_function_arn
+  description = "lambda_function_target_bpi_update"
+}
+
 output "aws_cloudwatch_event_rule" {
   value       = aws_cloudwatch_event_rule.fargate_scaling.arn
   description = "aws_cloudwatch_event_rule"
@@ -56,15 +61,7 @@ output "processing_queue_arn" {
 }
 
 
-output "aws_ssm_parameter_ecs_pipeline_enabled" {
-  value       = aws_ssm_parameter.ecs_pipeline_enabled.arn
-  description = "aws_ssm_parameter_ecs_pipeline_enabled"
-}
 
-output "aws_ssm_parameter_ecs_pipeline_max_tasks" {
-  value       = aws_ssm_parameter.ecs_pipeline_max_tasks.arn
-  description = "aws_ssm_parameter_ecs_pipeline_max_tasks"
-}
 
 output "codepipeline_s3_bucket_id" {
   value       = module.codepipeline_s3_bucket.s3_bucket_id

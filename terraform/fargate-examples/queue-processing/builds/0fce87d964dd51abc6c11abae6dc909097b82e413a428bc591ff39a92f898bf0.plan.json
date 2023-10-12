@@ -1,0 +1,1 @@
+{"filename": "builds/0fce87d964dd51abc6c11abae6dc909097b82e413a428bc591ff39a92f898bf0.zip", "runtime": "python3.9", "artifacts_dir": "builds", "build_plan": [["zip", "../../../application-code/ecs-target-setter/", null]]}

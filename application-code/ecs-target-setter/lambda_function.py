@@ -26,7 +26,6 @@ config=Config(
 session=boto3.Session()
 # sqs:session.resource('sqs', config=config)
 cloudwatch=session.client('cloudwatch', config=config)
-autoscaling=session.client('autoscaling', config=config)
 appautoscaling=boto3.client('application-autoscaling', config=config)
 
 # Read environment variables
@@ -72,7 +71,17 @@ def getMetricValue(metricNamespace, metricName):
         'MetricStat': {
             'Metric': {
                 'Namespace': metricNamespace,
-                'MetricName': metricName,
+                'MetricName': appMetricName,
+                    'Dimensions': [
+                        {
+                            'Name': 'Type',
+                            'Value': metricType
+                        },
+                        {
+                            'Name': 'QueueName',
+                            'Value': queueName
+                        },                        
+                    ]                
             },
             'Period': 1,
             'Stat': 'Average',
@@ -84,10 +93,17 @@ def getMetricValue(metricNamespace, metricName):
         StartTime=datetime.now(timezone.utc) - timedelta(seconds=86400),
         EndTime=datetime.now(timezone.utc),
     )
-
+    
+    #print(response)
+    
     if not response.get('MetricDataResults')[0].get('Values'): 
         msgProcessingDuration=defaultMsgProcDuration
     else: 
+        values = response.get('MetricDataResults')[0].get('Values')
+        total = sum(values)
+        count = len(values)
+        msgProcessingDuration =  total / count
+        print("count={} total={} msgProcessingDuration={}".format(count, total, msgProcessingDuration))
         msgProcessingDuration=response.get('MetricDataResults')[0].get('Values')[0]
         
     # Return 
@@ -128,10 +144,7 @@ def lambda_handler(event, context):
         ScalableDimension=policy.get('ScalableDimension'),
         PolicyName=policy.get('PolicyName'),
         PolicyType=policy.get('PolicyType'),
-        TargetTrackingScalingPolicyConfiguration=TargetTrackingConfig
-        #TargetTrackingScalingPolicyConfiguration=target_tracking_config
-        
-        
+        TargetTrackingScalingPolicyConfiguration=TargetTrackingConfig        
     )    
     print('Scaling policy of ECS has been successfully updated!')
 

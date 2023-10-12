@@ -27,3 +27,40 @@ variable "aws_region" {
   type        = string
   default     = "us-east-1"
 }
+
+variable "appMetricName" {
+  description = "appMetricName"
+  type        = string
+  default     = "MsgProcessingDuration"
+}
+
+variable "bpiMetricName" {
+  description = "bpiMetricName"
+  type        = string
+  default     = "ecsTargetBPI"
+}
+
+
+variable "metricType" {
+  description = "metricType"
+  type        = string
+  default     = "Single-Queue"
+}
+
+variable "metricNamespace" {
+  description = "metricNamespace"
+  type        = string
+  default     = "ECS-SQS-BPI"
+}
+
+variable "ecsServiceName" {
+  description = "ecsServiceName"
+  type        = string
+  default     = "ecsdemo-queue-proc"
+}
+
+variable "containerName" {
+  description = "containerName"
+  type        = string
+  default     = "ecsdemo-queue-proc"
+}

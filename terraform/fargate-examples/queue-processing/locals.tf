@@ -1,9 +1,12 @@
 locals {
 
-  name   = "ecsdemo-queue-proc"
+  name   = var.ecsServiceName
   region = var.aws_region
-
-  container_name = "ecsdemo-queue-proc"
+  appMetricName = var.appMetricName
+  bpiMetricName = var.bpiMetricName
+  metricType = var.metricType
+  metricNamespace = var.metricNamespace
+  container_name = var.containerName
 
   tags = {
     Blueprint  = local.name

@@ -121,6 +121,30 @@ output "autoscaling_policies" {
   description = "autoscaling_policies"
 }
 
+output "ecs_target" {
+  value       = aws_appautoscaling_target.ecs_target.resource_id
+  description = "ecs_target"
+}
 
+output "ecs_target_min" {
+  value       = aws_appautoscaling_target.ecs_target.min_capacity
+  description = "ecs_target_min"
+}
+
+output "ecs_target_max" {
+  value       = aws_appautoscaling_target.ecs_target.max_capacity
+  description = "ecs_target_max"
+}
+
+output "ecs_sqs_app_scaling_policy_arn" {
+  value       = aws_appautoscaling_policy.ecs_sqs_app_scaling_policy.arn
+  description = "ecs_sqs_app_scaling_policy_arn"
+}
+
+
+output "ecs_sqs_app_scaling_policy" {
+  value       = aws_appautoscaling_policy.ecs_sqs_app_scaling_policy.target_tracking_scaling_policy_configuration
+  description = "ecs_sqs_app_scaling_policy"
+}
 
 

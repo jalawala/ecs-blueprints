@@ -26,21 +26,31 @@ config = Config(
 session = boto3.Session()
 sqs = session.resource('sqs', config=config)
 cloudwatch = session.client('cloudwatch', config=config)
-ssm = session.client('ssm', config=config)
 
-# Initialize variables (from param store)
-#response = ssm.get_parameter(Name='ProcessingQueueName')
-#queueName = response['Parameter']['Value']
 queueName = os.environ['ProcessingQueueName']
+appMetricName = os.environ['appMetricName']
+metricType = os.environ['metricType']
+metricNamespace = os.environ['metricNamespace']
 
-def publishMetricValue(namespace, metricName, value):
+
+def publishMetricValue(metricValue):
 
     response = cloudwatch.put_metric_data(
-        Namespace = namespace,
+        Namespace = metricNamespace,
         MetricData = [
             {
-                'MetricName': metricName,
-                'Value': value,
+                'MetricName': appMetricName,
+                'Value': metricValue,
+                'Dimensions': [
+                    {
+                        'Name': 'Type',
+                        'Value': metricType
+                    },
+                    {
+                        'Name': 'QueueName',
+                        'Value': queueName
+                    }                    
+                ],
                 'StorageResolution': 1
             }
         ]
@@ -80,8 +90,7 @@ if __name__=="__main__":
                 logger.info('---- Message processed and deleted')
                 
                 # Report message duration to cloudwatch
-                publishMetricValue('ASG-Metrics', 'MsgProcessingDuration', processingDuration)
-
+                publishMetricValue(processingDuration)
 
         except ClientError as error: 
             logger.error('SQS Service Exception - Code: {}, Message: {}'.format(error.response['Error']['Code'],error.response['Error']['Message']))

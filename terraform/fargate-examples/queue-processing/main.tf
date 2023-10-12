@@ -52,7 +52,20 @@ resource "aws_ecs_task_definition" "this" {
         {
           name  = "ProcessingQueueName",
           value = module.processing_queue.this_sqs_queue_name
-        }
+        },
+        {
+          name  = "appMetricName",
+          value = local.appMetricName
+        },
+                {
+          name  = "metricType",
+          value = local.metricType
+        },
+                {
+          name  = "metricNamespace",
+          value = local.metricNamespace
+        },
+                
       ]      
       logConfiguration = {
         "logDriver" : "awslogs",
@@ -128,6 +141,10 @@ resource "aws_appautoscaling_policy" "ecs_sqs_app_scaling_policy" {
     scale_in_cooldown  = 0
     
     customized_metric_specification {
+      #metric_name = "BPI"
+      #namespace   = "ECS-SQS-BPI"
+      #statistic = "Average"
+      
       metrics {
         label = "Get the queue size (the number of messages waiting to be processed)"
         id    = "m1"
@@ -220,22 +237,49 @@ module "lambda_function_message_producer" {
   tags = local.tags
 }
 
+module "lambda_function_target_bpi_update" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name      = "${local.name}-target_bpi_update"
+  description        = "This function regularly updates the target BPI of the ECS"
+  handler            = "lambda_function.lambda_handler"
+  runtime            = "python3.9"
+  publish            = true
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.lambda_role.json
+  source_path        = "../../../application-code/ecs-target-setter/"
+
+  environment_variables = {
+    queueName      = module.processing_queue.this_sqs_queue_name
+    appMetricName = local.appMetricName
+    metricType = local.metricType
+    metricNamespace = local.metricNamespace
+    bpiMetricName = local.bpiMetricName
+    defaultMsgProcDuration =  25
+    nMessages = 300
+  }
+  
+  cloudwatch_logs_retention_in_days = 30
+
+  tags = local.tags
+}
+
 ################################################################################
 # Cloudwatch Events (EventBridge)
 ################################################################################
 
 resource "aws_cloudwatch_event_rule" "fargate_scaling" {
   name                = "ECSTaskTriggerScheduler"
-  description         = "This rule is used for autoscaling ECS with Lambda"
-  schedule_expression = "rate(2 minutes)"
+  description         = "This rule is used for update ECS Autoscaling Target BPI"
+  schedule_expression = "rate(10 minutes)"
 
   tags = local.tags
 }
 
-# resource "aws_cloudwatch_event_target" "ecs_fargate_lambda_function" {
-#   rule = aws_cloudwatch_event_rule.fargate_scaling.name
-#   arn  = module.lambda_function_scaling_metric_publisher.lambda_function_arn
-# }
+resource "aws_cloudwatch_event_target" "ecs_fargate_lambda_function" {
+  rule = aws_cloudwatch_event_rule.fargate_scaling.name
+  arn  = module.lambda_function_target_bpi_update.lambda_function_arn
+}
 
 ################################################################################
 # SQS Queue

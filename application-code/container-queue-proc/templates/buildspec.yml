@@ -34,7 +34,7 @@ phases:
       - mkdir artifacts
       - cp tmp-ntd.json artifacts/task-definition.json
       - echo Writing image definitions file...
-      - printf '[{"name":"hello-dude","imageUri":"%s"}]' $REPO_URL:$IMAGE_TAG > imagedefinitions.json
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $REPO_URL:$IMAGE_TAG > imagedefinitions.json
 
 artifacts:
   files:

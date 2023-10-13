@@ -157,7 +157,7 @@ module "ecs_service_definition_2" {
   # Task Definition
   
   create_iam_role        = false
-  tasks_iam_role_arn       =  aws_iam_role.task.arn
+  tasks_iam_role_arn     =  aws_iam_role.task.arn
   task_exec_iam_role_arn = one(data.aws_iam_roles.ecs_core_infra_exec_role.arns)
   enable_execute_command = true
 

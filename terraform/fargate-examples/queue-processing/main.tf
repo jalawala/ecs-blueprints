@@ -156,7 +156,7 @@ module "ecs_service_definition_2" {
 
   # Task Definition
   
-  create_iam_role        = false
+  create_tasks_iam_role        = false
   tasks_iam_role_arn     =  aws_iam_role.task.arn
   task_exec_iam_role_arn = one(data.aws_iam_roles.ecs_core_infra_exec_role.arns)
   enable_execute_command = true
@@ -164,7 +164,7 @@ module "ecs_service_definition_2" {
   container_definitions = {
     main_container = {
       name  = local.ecsServiceName2     
-      image = "${module.container_image_ecr.repository_url}:4332f79"
+      image = "${module.container_image_ecr.repository_url}:8d35703"
       
       environment = [
         {

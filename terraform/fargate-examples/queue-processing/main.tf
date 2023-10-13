@@ -129,7 +129,7 @@ resource "aws_appautoscaling_target" "ecs_target" {
 }
 
 resource "aws_appautoscaling_policy" "ecs_sqs_app_scaling_policy" {
-  name               = "ecs_sqs_scaling"
+  name               = local.scaling_policy_name
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.ecs_target.resource_id
   scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
@@ -250,6 +250,7 @@ module "lambda_function_target_bpi_update" {
   source_path        = "../../../application-code/ecs-target-setter/"
 
   environment_variables = {
+    scaling_policy_name = local.scaling_policy_name
     queueName      = module.processing_queue.this_sqs_queue_name
     appMetricName = local.appMetricName
     metricType = local.metricType
@@ -257,6 +258,13 @@ module "lambda_function_target_bpi_update" {
     bpiMetricName = local.bpiMetricName
     defaultMsgProcDuration =  25
     nMessages = 300
+  }
+  
+  allowed_triggers = {
+    PollSSMScale = {
+      principal  = "events.amazonaws.com"
+      source_arn = aws_cloudwatch_event_rule.fargate_scaling.arn
+    }
   }
   
   cloudwatch_logs_retention_in_days = 30
@@ -424,7 +432,26 @@ module "codepipeline_ci_cd" {
         ProjectName = module.codebuild_ci.project_id
       }
     }],
-  }]
+  }
+, {
+    name = "Deploy"
+    action = [{
+      name             = "Deploy_app"
+      category         = "Deploy"
+      owner            = "AWS"
+      provider         = "ECS"
+      version          = "1"
+      input_artifacts  = ["BuildArtifact_app"]
+      configuration = {
+        ClusterName = local.name
+        ServiceName = local.name
+        FileName    = "imagedefinitions.json"
+      }
+
+    }],
+  }
+  
+  ]
 
   create_iam_role = true
   iam_role_name   = "${local.name}-pipeline-${random_id.this.hex}"

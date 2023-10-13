@@ -29,7 +29,7 @@ cloudwatch=session.client('cloudwatch', config=config)
 appautoscaling=boto3.client('application-autoscaling', config=config)
 
 # Read environment variables
-ecs_sqs_app_scaling_policy_name=os.environ['ecs_sqs_app_scaling_policy_name']
+ecs_sqs_app_scaling_policy_name=os.environ['scaling_policy_name']
 desiredLatency=int(os.environ['desiredLatency'])
 defaultMsgProcDuration=int(os.environ['defaultMsgProcDuration'])
 

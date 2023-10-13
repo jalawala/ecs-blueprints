@@ -64,3 +64,11 @@ variable "containerName" {
   type        = string
   default     = "ecsdemo-queue-proc"
 }
+
+variable "scaling_policy_name" {
+  description = "scaling_policy_name"
+  type        = string
+  default     = "ecs_sqs_scaling"
+}
+
+

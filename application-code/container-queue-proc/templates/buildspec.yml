@@ -33,9 +33,11 @@ phases:
       - aws ecs register-task-definition --cli-input-json file://tmp-ntd.json
       - mkdir artifacts
       - cp tmp-ntd.json artifacts/task-definition.json
+      - echo Writing image definitions file...
+      - printf '[{"name":"hello-dude","imageUri":"%s"}]' $REPO_URL:$IMAGE_TAG > imagedefinitions.json
 
 artifacts:
   files:
     - '**/*'
-  base-directory: 'artifacts'
-  discard-paths: yes
+  #base-directory: 'artifacts'
+  #discard-paths: yes

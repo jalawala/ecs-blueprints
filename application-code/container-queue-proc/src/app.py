@@ -75,7 +75,7 @@ if __name__=="__main__":
         try:
             
             # Read messages from queue
-            logger.info('Polling messages from the processing queue')
+            logger.info('Polling messages from the   processing queue')
             messages = queue.receive_messages(AttributeNames=['All'], MaxNumberOfMessages=batchSize, WaitTimeSeconds=queueWaitTime) 
             if not messages: continue
             logger.info('-- Received {} messages'.format(len(messages)))

@@ -8,6 +8,9 @@ locals {
   metricType = var.metricType
   metricNamespace = var.metricNamespace
   container_name = var.containerName
+  ecsServiceName = var.ecsServiceName
+  ecsServiceName1 = "${var.ecsServiceName}-1"
+  ecsServiceName2 = "${var.ecsServiceName}-2"
 
   tags = {
     Blueprint  = local.name

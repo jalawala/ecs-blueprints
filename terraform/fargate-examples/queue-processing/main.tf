@@ -26,7 +26,7 @@ module "container_image_ecr" {
   source  = "terraform-aws-modules/ecr/aws"
   version = "~> 1.4"
 
-  repository_name = local.container_name
+  repository_name = local.ecsServiceName1
 
   repository_force_delete           = true
   create_lifecycle_policy           = false
@@ -37,7 +37,7 @@ module "container_image_ecr" {
 }
 
 resource "aws_ecs_task_definition" "this" {
-  family                   = "${local.container_name}-new"
+  family                   = local.ecsServiceName1
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = 256
@@ -46,7 +46,7 @@ resource "aws_ecs_task_definition" "this" {
   execution_role_arn       = one(data.aws_iam_roles.ecs_core_infra_exec_role.arns)
   container_definitions = jsonencode([
     {
-      name  = "${local.container_name}-new"
+      name  = local.ecsServiceName1
       image = module.container_image_ecr.repository_url
       environment = [
         {
@@ -126,7 +126,7 @@ module "ecs_service_definition_2" {
 
   deployment_controller = "ECS"
 
-  name               = "${local.name}-new"
+  name               = local.ecsServiceName2
   desired_count      = 1
   cluster_arn        = data.aws_ecs_cluster.core_infra.arn
   enable_autoscaling = false
@@ -163,7 +163,7 @@ module "ecs_service_definition_2" {
 
   container_definitions = {
     main_container = {
-      name  = "${local.container_name}-new"      
+      name  = local.ecsServiceName2     
       image = "${module.container_image_ecr.repository_url}:4332f79"
       
       environment = [
@@ -460,7 +460,7 @@ module "codebuild_ci" {
         value = aws_ecs_task_definition.this.family
         }, {
         name  = "CONTAINER_NAME"
-        value = local.container_name
+        value = local.ecsServiceName1
         }, {
         name  = "FOLDER_PATH"
         value = "./application-code/container-queue-proc/."

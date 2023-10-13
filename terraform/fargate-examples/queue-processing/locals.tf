@@ -3,6 +3,9 @@ locals {
   name   = var.ecsServiceName
   region = var.aws_region
   scaling_policy_name = var.scaling_policy_name
+  desiredLatency = var.desiredLatency
+  defaultMsgProcDuration = var.defaultMsgProcDuration
+  nMessages = var.nMessages
   appMetricName = var.appMetricName
   bpiMetricName = var.bpiMetricName
   metricType = var.metricType

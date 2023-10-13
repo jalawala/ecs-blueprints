@@ -33,7 +33,7 @@ ecs_sqs_app_scaling_policy_name=os.environ['scaling_policy_name']
 desiredLatency=int(os.environ['desiredLatency'])
 defaultMsgProcDuration=int(os.environ['defaultMsgProcDuration'])
 
-queueName=os.environ['ProcessingQueueName']
+queueName=os.environ['queueName']
 appMetricName = os.environ['appMetricName']
 bpiMetricName=os.environ['bpiMetricName']
 metricType=os.environ['metricType']

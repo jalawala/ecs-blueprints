@@ -71,4 +71,20 @@ variable "scaling_policy_name" {
   default     = "ecs_sqs_scaling"
 }
 
+variable "desiredLatency" {
+  description = "desiredLatency"
+  type        = number
+  default     = 300
+}
 
+variable "defaultMsgProcDuration" {
+  description = "defaultMsgProcDuration"
+  type        = number
+  default     = 25
+}
+
+variable "nMessages" {
+  description = "nMessages"
+  type        = number
+  default     = 600
+}

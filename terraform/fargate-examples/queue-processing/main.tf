@@ -312,8 +312,8 @@ module "lambda_function_message_producer" {
 
   environment_variables = {
     queueName      = module.processing_queue.this_sqs_queue_name
-    defaultMsgProcDuration =  25
-    nMessages = 300
+    defaultMsgProcDuration =  local.defaultMsgProcDuration
+    nMessages = local.nMessages
   }
   
   cloudwatch_logs_retention_in_days = 30
@@ -340,8 +340,8 @@ module "lambda_function_target_bpi_update" {
     metricType = local.metricType
     metricNamespace = local.metricNamespace
     bpiMetricName = local.bpiMetricName
-    defaultMsgProcDuration =  25
-    nMessages = 300
+    defaultMsgProcDuration =  local.defaultMsgProcDuration
+    desiredLatency = local.desiredLatency
   }
   
   allowed_triggers = {

@@ -120,6 +120,89 @@ module "ecs_service_definition" {
   tags = local.tags
 }
 
+module "ecs_service_definition_2" {
+  source  = "terraform-aws-modules/ecs/aws//modules/service"
+  version = "~> 5.2.2"
+
+  deployment_controller = "ECS"
+
+  name               = "${local.name}-new"
+  desired_count      = 1
+  cluster_arn        = data.aws_ecs_cluster.core_infra.arn
+  enable_autoscaling = false
+
+  subnet_ids = data.aws_subnets.private.ids
+    security_group_rules = {
+    egress_all = {
+      type        = "egress"
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+
+  # service_connect_configuration = {
+  #   enabled = false
+  #   service = {
+  #     client_alias = [{
+  #       port     = local.container_port
+  #       dns_name = local.container_name
+  #     }],
+  #     port_name      = "${local.container_name}-${local.container_port}"
+  #     discovery_name = local.container_name
+  #   }
+  # }
+
+  # Task Definition
+  
+  create_iam_role        = false
+  tasks_iam_role_arn       =  aws_iam_role.task.arn
+  task_exec_iam_role_arn = one(data.aws_iam_roles.ecs_core_infra_exec_role.arns)
+  enable_execute_command = true
+
+  container_definitions = {
+    main_container = {
+      name  = "${local.container_name}-new"      
+      image = "${module.container_image_ecr.repository_url}:4332f79"
+      
+      environment = [
+        {
+          name  = "ProcessingQueueName",
+          value = module.processing_queue.this_sqs_queue_name
+        },
+        {
+          name  = "appMetricName",
+          value = local.appMetricName
+        },
+                {
+          name  = "metricType",
+          value = local.metricType
+        },
+        {
+          name  = "metricNamespace",
+          value = local.metricNamespace
+        },        
+      ]
+      
+      enable_cloudwatch_logging = true
+      log_configuration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group = aws_cloudwatch_log_group.this.name
+          awslogs-stream-prefix = "ecs"
+          awslogs-region = local.region
+        }
+      }      
+
+    }
+  }
+
+  ignore_task_definition_changes = false
+
+  tags = local.tags
+}
+
 resource "aws_appautoscaling_target" "ecs_target" {
   max_capacity       = 10
   min_capacity       = 1
@@ -443,8 +526,8 @@ module "codepipeline_ci_cd" {
       version          = "1"
       input_artifacts  = ["BuildArtifact_app"]
       configuration = {
-        ClusterName = local.name
-        ServiceName = local.name
+        ClusterName = data.aws_ecs_cluster.core_infra.cluster_name
+        ServiceName = module.ecs_service_definition.name
         FileName    = "imagedefinitions.json"
       }
 

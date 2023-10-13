@@ -62,6 +62,7 @@ def publishMetricValue(metricValue):
 if __name__=="__main__":
 
     # Initialize variables
+    logger.info('Environment queueName {} appMetricName {} metricType {} metricNamespace {}'.format(queueName, appMetricName, metricType, metricNamespace))
     logger.info('Calling get_queue_by_name....')
     queue = sqs.get_queue_by_name(QueueName=queueName)
     batchSize = 1

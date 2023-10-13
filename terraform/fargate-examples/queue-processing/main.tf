@@ -91,7 +91,7 @@ module "ecs_service_definition" {
 
   deployment_controller = "ECS"
 
-  name               = local.name
+  name               = local.ecsServiceName1
   desired_count      = 1
   cluster_arn        = data.aws_ecs_cluster.core_infra.arn
   enable_autoscaling = false
@@ -202,6 +202,7 @@ module "ecs_service_definition_2" {
 
   tags = local.tags
 }
+
 
 resource "aws_appautoscaling_target" "ecs_target" {
   max_capacity       = 10

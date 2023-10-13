@@ -69,7 +69,7 @@ if __name__=="__main__":
     queueWaitTime= 5
 
     # start continuous loop
-    logger.info('Starting queue consumer process...')
+    logger.info('Starting queue consumer process....')
     while True: 
 
         try:

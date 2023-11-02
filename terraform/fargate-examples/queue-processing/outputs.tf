@@ -144,4 +144,7 @@ output "ecs_sqs_app_scaling_policy" {
   description = "ecs_sqs_app_scaling_policy"
 }
 
-
+output "aws_iam_roles" {
+  value       = data.aws_iam_roles.ecs_core_infra_exec_role
+  description = "aws_iam_rolesdata"
+}

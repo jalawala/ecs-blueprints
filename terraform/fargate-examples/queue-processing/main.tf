@@ -610,6 +610,22 @@ data "aws_iam_policy_document" "task_role" {
 data "aws_iam_policy_document" "lambda_role" {
 
   statement {
+    sid       = "CWMetrics"
+    actions   = [
+      "cloudwatch:PutMetricData",
+      "cloudwatch:GetMetricData"
+    ]
+    resources = ["*"]
+  }
+  statement {
+    sid       = "AppAutoscalingUpdate"
+    actions   = [
+      "application-autoscaling:PutScalingPolicy",
+      "application-autoscaling:DescribeScalingPolicies"
+    ]
+    resources = ["*"]
+  }  
+  statement {
     sid       = "IAMPassRole"
     actions   = ["iam:PassRole"]
     resources = ["*"]

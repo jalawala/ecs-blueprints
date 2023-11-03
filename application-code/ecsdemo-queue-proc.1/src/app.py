@@ -84,15 +84,22 @@ if __name__=="__main__":
             
             # Process messages
             for message in messages:
+                
+                # Process message
                 now = datetime.datetime.now()
+                #logger.info('Time {} ---- Processing message {}...'.format(now, message))
+                #logger.info('Time {} ---- Processing message {}...'.format(message.message_id))
                 messageBody = json.loads(message.body)
+                #messageId = messageBody.get('id')
                 processingDuration = messageBody.get('duration')
                 logger.info('Time {} Processing message_id {} messageBody {}...'.format(now, message.message_id, messageBody))
                 time.sleep(processingDuration)
+                #time.sleep(2)
                 
                 # Delete the message
                 message.delete()
                 now = datetime.datetime.now()
+                #logger.info('Time {} ---- Message processed and deleted'.format(now))
                 
                 # Report message duration to cloudwatch
                 publishMetricValue(processingDuration)

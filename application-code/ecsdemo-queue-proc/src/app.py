@@ -10,7 +10,7 @@ from botocore.exceptions import ClientError
 from botocore.config import Config
 import datetime
 
-# Create logger
+# Create logger 
 #logging.basicConfig(filename='consumer.log', level=logging.INFO)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -50,7 +50,7 @@ def publishMetricValue(metricValue):
                         'Value': metric_type
                     },
                     {
-                        'Name': 'queue_name',
+                        'Name': 'QueueName',
                         'Value': queue_name
                     }                    
                 ],
@@ -61,7 +61,7 @@ def publishMetricValue(metricValue):
 
 if __name__=="__main__":
 
-    # Initialize variables 
+    # Initialize variables    
     logger.info('Environment queue_name {} app_metric_name {} metric_type {} metric_namespace {}'.format(queue_name, app_metric_name, metric_type, metric_namespace))
     logger.info('Calling get_queue_by_name....')
     queue = sqs.get_queue_by_name(QueueName=queue_name)

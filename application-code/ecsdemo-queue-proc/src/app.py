@@ -61,7 +61,7 @@ def publishMetricValue(metricValue):
 
 if __name__=="__main__":
 
-    # Initialize variables
+    # Initialize variables 
     logger.info('Environment queue_name {} app_metric_name {} metric_type {} metric_namespace {}'.format(queue_name, app_metric_name, metric_type, metric_namespace))
     logger.info('Calling get_queue_by_name....')
     queue = sqs.get_queue_by_name(QueueName=queue_name)

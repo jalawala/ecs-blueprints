@@ -61,3 +61,4 @@ The rest of the components provide CI/CD pipeline to build and update the ECS Fa
     * IAM role
 
 Note that the CodeBuild and CodePipeline services are provisioned and configured here. However, they primarily interact with the *application-code/container-queue-proc* repository. CodePipeline is listening for changes and checkins to that repository. And CodeBuild is using the *Dockerfile* and *templates/* files from that application folder.
+   

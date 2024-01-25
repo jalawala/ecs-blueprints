@@ -30,7 +30,7 @@ module "container_image_ecr" {
 
   repository_force_delete           = true
   create_lifecycle_policy           = false
-  repository_read_access_arns       = [one(data.aws_iam_roles.ecs_core_infra_exec_role.arns)]
+  repository_read_access_arns       = [sort(data.aws_iam_roles.ecs_core_infra_exec_role.arns)[0]]
   repository_read_write_access_arns = [module.codepipeline_ci_cd.codepipeline_role_arn]
 
   tags = local.tags
@@ -43,7 +43,7 @@ resource "aws_ecs_task_definition" "this" {
   cpu                      = 256
   memory                   = 512
   task_role_arn            = aws_iam_role.task.arn
-  execution_role_arn       = one(data.aws_iam_roles.ecs_core_infra_exec_role.arns)
+  execution_role_arn       = sort(data.aws_iam_roles.ecs_core_infra_exec_role.arns)[0]
   container_definitions = jsonencode([
     {
       name  = local.ecsServiceName1
@@ -158,7 +158,7 @@ module "ecs_service_definition_2" {
   
   create_tasks_iam_role        = false
   tasks_iam_role_arn     =  aws_iam_role.task.arn
-  task_exec_iam_role_arn = one(data.aws_iam_roles.ecs_core_infra_exec_role.arns)
+  task_exec_iam_role_arn = sort(data.aws_iam_roles.ecs_core_infra_exec_role.arns)[0]
   enable_execute_command = true
 
   container_definitions = {

@@ -25,19 +25,19 @@ config=Config(
 # Define session and resources
 session=boto3.Session()
 # sqs:session.resource('sqs', config=config)
-cloudwatch=session.client('cloudwatch', config=config)
-appautoscaling=boto3.client('application-autoscaling', config=config)
+cloudwatch=session.client('cloudwatch', config=config, region_name='us-west-2')
+appautoscaling=boto3.client('application-autoscaling', config=config, region_name='us-west-2')
 
 # Read environment variables
 ecs_sqs_app_scaling_policy_name=os.environ['scaling_policy_name']
-desiredLatency=int(os.environ['desiredLatency'])
-defaultMsgProcDuration=int(os.environ['defaultMsgProcDuration'])
+desiredLatency=int(os.environ['desired_latency'])
+defaultMsgProcDuration=int(os.environ['default_msg_proc_duration'])
 
-queueName=os.environ['queueName']
-appMetricName = os.environ['appMetricName']
-bpiMetricName=os.environ['bpiMetricName']
-metricType=os.environ['metricType']
-metricNamespace=os.environ['metricNamespace']
+queueName=os.environ['queue_name']
+appMetricName = os.environ['app_metric_name']
+bpiMetricName=os.environ['bpi_metric_name']
+metricType=os.environ['metric_type']
+metricNamespace=os.environ['metric_namespace']
 
 
 def publishMetricValue(metricValue):
@@ -123,20 +123,136 @@ def lambda_handler(event, context):
 
     # Get scaling policy of ASG
     
-    response =appautoscaling.describe_scaling_policies(PolicyNames=[ecs_sqs_app_scaling_policy_name], ServiceNamespace='ecs')
+    print("ecs_sqs_app_scaling_policy_name={}".format(ecs_sqs_app_scaling_policy_name))
+    
+    response = appautoscaling.describe_scaling_policies(PolicyNames=[ecs_sqs_app_scaling_policy_name], ServiceNamespace='ecs')
     policies =response.get('ScalingPolicies')  
     #pprint(policies)
     policy=policies[0]
-    print(policy)
+    #print(policy)
 
     # Get target tracking config and update target value
     TargetTrackingConfig=policy.get('TargetTrackingScalingPolicyConfiguration')
     #print(TargetTrackingConfig)
-    TargetTrackingConfig['TargetValue'] = newTargetBPI
-    TargetTrackingConfig['CustomizedMetricSpecification']['MetricName'] = bpiMetricName
-    TargetTrackingConfig['CustomizedMetricSpecification']['Namespace'] = metricNamespace
-    TargetTrackingConfig['CustomizedMetricSpecification']['Statistic'] = 'Average'
+    TargetTrackingConfig['TargetValue'] = 10
+    #TargetTrackingConfig['TargetValue'] = newTargetBPI
+    TargetTrackingConfig['ScaleOutCooldown'] = 240
+    TargetTrackingConfig['ScaleInCooldown'] = 240
+    
+    # TargetTrackingConfig['CustomizedMetricSpecification']['MetricName'] = bpiMetricName
+    # TargetTrackingConfig['CustomizedMetricSpecification']['Namespace'] = metricNamespace
+    # TargetTrackingConfig['CustomizedMetricSpecification']['Statistic'] = 'Average'
 
+    # customized_metric_specification {
+
+    #   metrics {
+    #     label = "Get the queue size (the number of messages waiting to be processed)"
+    #     id    = "m1"
+
+    #     metric_stat {
+    #       metric {
+    #         metric_name = "ApproximateNumberOfMessagesVisible"
+    #         namespace   = "AWS/SQS"
+
+    #         dimensions {
+    #           name  = "QueueName"
+    #           value = module.processing_queue.this_sqs_queue_name
+    #         }
+    #       }
+
+    #       stat = "Average"
+    #     }
+
+    #     return_data = false
+    #   }
+
+    #   metrics {
+    #     label = "Get the ECS running task count (the number of currently running tasks)"
+    #     id    = "m2"
+
+    #     metric_stat {
+    #       metric {
+    #         metric_name = "RunningTaskCount"
+    #         namespace   = "ECS/ContainerInsights"
+
+    #         dimensions {
+    #           name  = "ClusterName"
+    #           value = data.aws_ecs_cluster.core_infra.cluster_name
+    #         }
+
+    #         dimensions {
+    #           name  = "ServiceName"
+    #           value = module.ecs_service_definition.name
+    #         }
+    #       }
+
+    #       stat = "Average"
+    #     }
+
+    #     return_data = false
+    #   }
+
+    #   metrics {
+    #     label      = "Calculate the backlog per instance"
+    #     id         = "e1"
+    #     expression = "m1 / m2"
+    #     return_data = true
+    #   }
+    # }
+    
+    customMetric = {
+            'Metrics': [
+                {
+                    'Id': 'm1',
+                    'Label': 'Get the queue size (the number of messages waiting to be processed)',
+                    'MetricStat': {
+                        'Metric': {
+                            'Dimensions': [
+                                {
+                                    'Name': 'QueueName',
+                                    'Value': queueName
+                                },
+                            ],
+                            'MetricName': 'ApproximateNumberOfMessagesVisible',
+                            'Namespace': 'AWS/SQS'
+                        },
+                        'Stat': 'Average'
+                    },
+                    'ReturnData': False
+                },
+                {
+                    'Id': 'm2',
+                    'Label': 'Get the ECS running task count (the number of currently running tasks)',
+                    'MetricStat': {
+                        'Metric': {
+                            'Dimensions': [
+                                {
+                                    'Name': 'ClusterName',
+                                    'Value': 'core-infra'
+                                },
+                                {
+                                    'Name': 'ServiceName',
+                                    'Value': 'ecsdemo-queue-proc3'
+                                },                                
+                            ],
+                            'MetricName': 'RunningTaskCount',
+                            'Namespace': 'ECS/ContainerInsights'
+                        },
+                        'Stat': 'Average'
+                    },
+                    'ReturnData': False
+                },
+                {
+                    'Id': 'm3',
+                    'Label': 'Calculate the backlog per instance',
+                    'Expression': 'm1 / m2',
+                    'ReturnData': True
+                },                
+            ]
+    }
+    
+    
+    TargetTrackingConfig['CustomizedMetricSpecification'] = customMetric
     # Update scaling policy of ASG
     appautoscaling.put_scaling_policy(
         ServiceNamespace='ecs', 
